@@ -45,17 +45,28 @@ def process_log_file(cur, filepath):
                     'weekday')
     time_df = pd.DataFrame(dict(zip(column_labels, time_data)))
 
-    for i, row in time_df.iterrows():
-        cur.execute(time_table_insert, list(row))
+    current_path = os.path.dirname(os.path.abspath(__file__))
+
+    output_file_path = current_path + '/data/time_df.csv'
+    time_df.to_csv(output_file_path, index=False, header=False, sep='|')
+
+    # copy users records
+    cur.execute(time_table_copy)
 
     # load user table
     user_df = df[['userId', 'firstName', 'lastName', 'gender', 'level']]
 
-    # insert user records
-    for i, row in user_df.iterrows():
-        cur.execute(user_table_insert, row)
+    output_file_path = current_path + '/data/user_df.csv'    
+    user_df.to_csv(output_file_path, index=False, header=False, sep='|')
+
+    # copy users records
+    cur.execute(user_table_copy)
+
 
     df['timestamp'] = pd.to_datetime(df['ts'], unit='ms')
+
+    songplay_data = []
+    columns = ['timestamp', 'user_id', 'song_id', 'artist_id', 'session_id', 'level', 'location', 'user_agent']
 
     # insert songplay records
     for index, row in df.iterrows():
@@ -69,9 +80,15 @@ def process_log_file(cur, filepath):
         else:
             songid, artistid = None, None
 
-        # insert songplay record
-        songplay_data = (row.timestamp, row.userId, songid, artistid, row.sessionId, row.level, row.location, row.userAgent)
-        cur.execute(songplay_table_insert, songplay_data)
+    # insert songplay record
+        songplay_data.append((row.timestamp, row.userId, songid, artistid, row.sessionId, row.level, row.location, row.userAgent.replace("\"", "")))
+
+    songplay_df = pd.DataFrame(songplay_data, columns=columns)
+
+    output_file_path = current_path + '/data/songplay_df.csv'    
+    songplay_df.to_csv(output_file_path, index=False, header=False, sep='|')
+
+    cur.execute(songplay_table_copy)
 
 
 def process_data(cur, conn, filepath, func):

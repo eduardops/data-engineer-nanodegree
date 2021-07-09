@@ -77,7 +77,7 @@ insert into t_songplay
     level, 
     location ,
     user_agent
-) values (%s,%s,%s,%s,%s,%s,%s, %s)
+) values (%s,%s,%s,%s,%s,%s,%s,%s)
 """)
 
 user_table_insert = ("""
@@ -118,8 +118,27 @@ insert into t_time ("timestamp", hour, day, weekofyear, month, year, weekday)
 values (%s, %s, %s, %s, %s, %s, %s);
 """)
 
-# FIND SONGS
+time_table_copy = ("""
+COPY t_time
+FROM '/home/eduardops/work/fbt/git/data-engineer-nanodegree/01-datamodeling/project-01/data/time_df.csv'
+DELIMITER '|' CSV;
+""")
 
+
+user_table_copy = ("""
+COPY t_user
+FROM '/home/eduardops/work/fbt/git/data-engineer-nanodegree/01-datamodeling/project-01/data/user_df.csv'
+DELIMITER '|' CSV;
+""")
+
+songplay_table_copy = ("""
+COPY t_songplay
+FROM '/home/eduardops/work/fbt/git/data-engineer-nanodegree/01-datamodeling/project-01/data/songplay_df.csv'
+DELIMITER '|' CSV;
+""")
+
+
+# FIND SONGS
 song_select = ("""
 select 
     s.song_id,
