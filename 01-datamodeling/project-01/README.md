@@ -1,5 +1,14 @@
 README.md
 
+# Project 1: Data Modeling with Postgres
+
+This project create a Postgres database with tables that offer song play analysis using users, songs, artist and time dimensions.
+
+
+![Data Model](relationships.real.compact.png "Data Model")
+
+
+
 # Developers
 Instructions for installing this project on your local machine and getting it running in its own virtual environment.
 1.  Clone this project into a new directory - click the clone button above on GitHub to get the link and command to use
@@ -22,6 +31,7 @@ This module contains all sql queries used to create tables, drop tables and inse
 This module should be run first to create reset and create all tables
 
 ##  etl.py
+
 This module contains the logic to read from files and write to each one of the corresponding tables
 
 ## etl.ipynb

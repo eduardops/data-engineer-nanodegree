@@ -11,14 +11,23 @@ from sql_queries import (
     user_table_insert,
     song_select,
     songplay_table_copy,
-    songplay_table_insert
+    songplay_table_insert,
+    create_sa_table_queries,
+    drop_sa_table_queries
 )
+
+# conn <class 'psycopg2.extensions.connection'>
+# cur < class 'psycopg2.extensions.cursor' >
 
 
 def insert_song_data(df, cur):
-    """
-    - project corresponding song data from dataframe
-    - and execute insert on dimension table song
+    """ Insert song data in database
+
+    Set song data from dataframe and execute insert on dimension table song
+
+    Args:
+        df (pandas.core.frame.DataFrame): dataframe with one row to be inserted
+        cur (psycopg2.extensions.cursor): database cursor
     """
     # insert song record
     song_data = df[['song_id', 'artist_id', 'title',
@@ -27,9 +36,14 @@ def insert_song_data(df, cur):
 
 
 def insert_artist_data(df, cur):
-    """
-    - project corresponding artist data from dataframe
-    - and execute insert on dimension table artist
+    """ Insert artist data
+
+    Set corresponding artist data from dataframe and execute insert on
+    dimension table artist
+
+    Args:
+        df (pandas.core.frame.DataFrame): dataframe with one row to be inserted
+        cur (psycopg2.extensions.cursor): database cursor
     """
     # insert artist record
     artist_columns = ['artist_id',
@@ -42,13 +56,15 @@ def insert_artist_data(df, cur):
 
 
 def process_song_file(cur, filepath):
-    """
-    - Read from each one of the song files
+    """ Process songs file extracting song and artist information
 
-    - extract song information
-    - extract artist information
+    Read from each one of the song files extract song and
+    artist information, execute insert on corresponding
+    dimension table
 
-    - execute insert on corresponding dimension table
+    Args:
+        cur (psycopg2.extensions.cursor): database cursor
+        filepath (str): file path
     """
 
     # open song file
@@ -62,10 +78,16 @@ def process_song_file(cur, filepath):
 
 
 def stage_time_dimension_data(df, cur, output_file_path):
-    """
-    - transform time stamp data to create new columns
-    - stores data in temporary file
-    - execute sql copy to temporary stage table
+    """ Load time data to temporary file and stage in database
+
+    Transform time stamp data to create new columns,
+    stores data in temporary file and execute sql copy
+    to temporary stage table
+
+    Args:
+        df (pandas.core.frame.DataFrame): Dataframe with data to be staged
+        cur (psycopg2.extensions.cursor): database cursor
+        filepath (str): file path
     """
 
     # create new columns to time dimension
@@ -95,10 +117,16 @@ def stage_time_dimension_data(df, cur, output_file_path):
 
 
 def stage_user_dimension_data(df, cur, current_path):
-    """
-    - transform user data
-    - stores data in temporary file
-    - execute sql copy to temporary user stage table
+    """ Load user data to temporary file and stage in database
+
+    Transform user data to create new columns,
+    stores data in temporary file and execute sql copy
+    to temporary stage table
+
+    Args:
+        df (pandas.core.frame.DataFrame): Dataframe with data to be staged
+        cur (psycopg2.extensions.cursor): database cursor
+        current_path (str): file path
     """
     # load user table
     user_df = df[['userId', 'firstName', 'lastName', 'gender', 'level']]
@@ -111,10 +139,16 @@ def stage_user_dimension_data(df, cur, current_path):
 
 
 def stage_songplay_data(df, cur, current_path):
-    """
-    - transform songplay data
-    - stores data in temporary file
-    - execute sql copy to temporary songplay stage table
+    """ Load song play log to temporary file and stage in database
+
+    Transform user data to create new columns,
+    stores data in temporary file and execute sql copy
+    to temporary stage table
+
+    Args:
+        df (pandas.core.frame.DataFrame): Dataframe with data to be staged
+        cur (psycopg2.extensions.cursor): database cursor
+        current_path (str): file path
     """
     songplay_data = []
     columns = ['timestamp', 'user_id', 'song_id', 'artist_id',
@@ -155,11 +189,16 @@ def stage_songplay_data(df, cur, current_path):
 
 
 def process_log_file(cur, filepath):
-    """
-    - extract and transform log file to create:
-    - staging are for dimension table user data
-    - staging are for dimension table time data
-    - staging are for fact table songplay data
+    """ Process a log file to corresponding dimensions and fact table
+
+    Extract and transform log file to create:
+    staging area for dimension table user data
+    staging area for dimension table time data
+    staging area for fact table songplay data
+
+    Args:
+        cur (psycopg2.extensions.cursor): database cursor
+        filepath (str): log file path
     """
     # open log file
     df = pd.read_json(filepath, lines=True)
@@ -184,10 +223,18 @@ def process_log_file(cur, filepath):
 
 
 def process_data(cur, conn, filepath, func):
+    """ Discover files in filepath and execute function to ETL files
+
+    Function to iterate over all files in filepath mathing extension
+    and executes corresponding processing function
+
+    Args:
+        cur (psycopg2.extensions.cursor): database cursor
+        conn (psycopg2.extensions.connection): existing open connection
+        filepath (str): filepath for data in filesystem
+        func: function to be executed
     """
-    - iterate over all files in filepath mathing extension
-    - and executes corresponding processing function
-    """
+
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -207,10 +254,16 @@ def process_data(cur, conn, filepath, func):
 
 
 def process_staging_area_to_tables(cur, conn):
+    """ Function to execute load from staging tables to final destinations
+
+    Function responsible for populate dimensions time, dimension user
+    and fact table songplay from corresponding staging tables
+
+    Args:
+        cur (psycopg2.extensions.cursor): database cursor
+        conn (psycopg2.extensions.connection): existing open connection
     """
-    - method responsible for populate dimensions time, dimension user
-    - and fact table songplay from corresponding staging tables
-    """
+
     print("processing stage to time table")
     cur.execute(time_table_insert)
     conn.commit()
@@ -223,17 +276,45 @@ def process_staging_area_to_tables(cur, conn):
     cur.execute(songplay_table_insert)
     conn.commit()
 
-    print("finished")
+
+def execute_sql(sql_queries, cur, conn):
+    """ Iter over sql queries array and execute
+
+    Args:
+        sql_queries (str): Array containing SQL scripts to execute
+        cur (psycopg2.extensions.cursor): database cursor
+        conn (psycopg2.extensions.connection): existing open connection
+    """
+
+    # get total number of files found
+    num_files = len(sql_queries)
+    print('{} sql queries to execute'.format(num_files))
+
+    for i, sql in enumerate(sql_queries, 1):
+        cur.execute(sql)
+        conn.commit()
+        print('{}/{} sql queries executed.'.format(i, num_files))
 
 
 def main():
+    """ Main function
+
+    Open connection, execute setup, process files and tear down temporary tables
+    """
+
     conn = psycopg2.connect(
-        "host=127.0.0.1 dbname=studentdb user=student password=student")
+        "host=127.0.0.1 dbname=sparkifydb user=student password=student")
     cur = conn.cursor()
+
+    print('conn', type(conn))
+
+    execute_sql(create_sa_table_queries, cur, conn)
 
     process_data(cur, conn, filepath='data/song_data', func=process_song_file)
     process_data(cur, conn, filepath='data/log_data', func=process_log_file)
     process_staging_area_to_tables(cur, conn)
+
+    execute_sql(drop_sa_table_queries, cur, conn)
 
     conn.close()
 
