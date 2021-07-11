@@ -13,7 +13,8 @@ from sql_queries import (
     songplay_table_copy,
     songplay_table_insert,
     create_sa_table_queries,
-    drop_sa_table_queries
+    drop_sa_table_queries,
+    remove_user_duplicates
 )
 
 # conn <class 'psycopg2.extensions.connection'>
@@ -269,6 +270,7 @@ def process_staging_area_to_tables(cur, conn):
     conn.commit()
 
     print("processing stage to user table")
+    cur.execute(remove_user_duplicates)
     cur.execute(user_table_insert)
     conn.commit()
 

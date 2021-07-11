@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS songplay
     location VARCHAR,
     user_agent VARCHAR,
     UNIQUE ("timestamp", song_id, artist_id, user_id),
-    FOREIGN KEY (user_id, level) REFERENCES users (user_id, level),
+    FOREIGN KEY (user_id) REFERENCES users (user_id),
     FOREIGN KEY (song_id) REFERENCES songs (song_id),
     FOREIGN KEY (artist_id) REFERENCES artists (artist_id),
     FOREIGN KEY ("timestamp") REFERENCES time ("timestamp")
@@ -36,13 +36,12 @@ CREATE TABLE IF NOT EXISTS songplay
 user_table_create = ("""
 CREATE TABLE IF NOT EXISTS users
 (
-    user_id VARCHAR NOT NULL,
+    user_id VARCHAR UNIQUE NOT NULL,
     first_name VARCHAR,
     last_name VARCHAR,
     gender CHAR,
     level VARCHAR,
-    UNIQUE (user_id, level),
-    PRIMARY KEY (user_id, level)
+    PRIMARY KEY (user_id)
 );
 """)
 
@@ -86,7 +85,7 @@ CREATE TABLE IF NOT EXISTS time
 
 
 # NOTE: as might not be possible to create schemas in tests database
-# i'm using prefix "sa_" to represent staging area schema and corresponding
+# i'm using prefix "sa_" to represent staging area schema AND corresponding
 # tables
 
 # sa tables
@@ -121,7 +120,7 @@ CREATE TABLE IF NOT EXISTS sa_songs
     song_id VARCHAR,
     title VARCHAR,
     artist_id VARCHAR,
-    YEAR INTEGER,
+    year INTEGER,
     duration FLOAT
 );
 """)
@@ -153,7 +152,7 @@ CREATE TABLE IF NOT EXISTS sa_time
 # INSERT RECORDS
 
 songplay_table_insert = ("""
-insert into songplay
+INSERT INTO songplay
 (
     "timestamp",
     user_id ,
@@ -164,7 +163,7 @@ insert into songplay
     location ,
     user_agent
 )
-select
+SELECT
     "timestamp",
     user_id ,
     song_id ,
@@ -173,13 +172,13 @@ select
     level,
     location ,
     user_agent
-from sa_songplay
-on conflict ("timestamp", song_id, artist_id, user_id)
-do nothing;
+FROM sa_songplay
+ON CONFLICT ("timestamp", song_id, artist_id, user_id)
+DO NOTHING;
 """)
 
 user_table_insert = ("""
-insert into users
+INSERT INTO users AS u
 (
     user_id,
     first_name,
@@ -187,19 +186,19 @@ insert into users
     gender,
     level
 )
-select
+SELECT
     user_id,
     first_name,
     last_name,
     gender,
     level
-from sa_users
-on conflict (user_id, level)
-do nothing;
+FROM sa_users
+ON CONFLICT (user_id)
+DO UPDATE SET level = EXCLUDED.level;
 """)
 
 song_table_insert = ("""
-insert into songs
+INSERT INTO songs
 (
     song_id,
     artist_id,
@@ -207,21 +206,21 @@ insert into songs
     year,
     duration
 )
-values (%s, %s, %s, %s, %s)
-on conflict (song_id)
-do nothing;
+VALUES (%s, %s, %s, %s, %s)
+ON CONFLICT (song_id)
+DO NOTHING;
 """)
 
 artist_table_insert = ("""
-insert into artists (
+INSERT INTO artists (
     artist_id,
     name,
     location,
     latitude,
     longitude)
-values (%s, %s, %s, %s, %s)
-on conflict (artist_id)
-do nothing;
+VALUES (%s, %s, %s, %s, %s)
+ON CONFLICT (artist_id)
+DO NOTHING;
 """)
 
 time_table_insert = ("""
@@ -258,17 +257,38 @@ DELIMITER '|' CSV;
 
 # FIND song
 song_select = ("""
-select
+SELECT
     s.song_id,
     a.artist_id
-from artists a,
+FROM artists a,
     songs s
-where 1=1
-    and a.artist_id = s.artist_id
-    and s.title ilike %s
-    and a.name ilike %s
-    and s.duration = %s
+WHERE 1=1
+    AND a.artist_id = s.artist_id
+    AND s.title ilike %s
+    AND a.name ilike %s
+    AND s.duration = %s
 """)
+
+remove_user_duplicates = (
+    """
+-- CREATE A TEMPORARY SEQUENCIAL VALUE TO EACH ROW
+ALTER TABLE public.sa_users ADD temp_value SERIAL NOT NULL;
+
+WITH cte AS (
+	SELECT temp_value,
+	user_id,
+	ROW_NUMBER() OVER (
+	        PARTITION BY
+				user_id
+			ORDER BY temp_value DESC
+	    ) row_num
+	FROM sa_users
+)
+DELETE FROM
+sa_users su
+WHERE su.temp_value IN (SELECT c.temp_value FROM cte c WHERE c.row_num > 1);
+"""
+)
 
 # QUERY LISTS
 
@@ -281,5 +301,6 @@ drop_table_queries = [songplay_table_drop, user_table_drop,
 create_sa_table_queries = [songplay_table_create_sa, user_table_create_sa,
                            time_table_create_sa]
 
-drop_sa_table_queries = [songplay_table_drop_sa, user_table_drop_sa,
+drop_sa_table_queries = [songplay_table_drop_sa,
+                         user_table_drop_sa,
                          time_table_drop_sa]
