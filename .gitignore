@@ -5,6 +5,6 @@ data
 
 .vscode
 
-env/*
+env
 
 01-datamodeling/project-01/docs/
