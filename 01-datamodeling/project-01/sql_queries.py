@@ -1,78 +1,86 @@
 import os
-# DROP TABLES
+# DROP TABLE
 
-songplay_table_drop = "drop table if exists t_songplay;"
-user_table_drop = "drop table if exists t_user;"
-song_table_drop = "drop table if exists t_song;"
-artist_table_drop = "drop table if exists t_artist;"
-time_table_drop = "drop table if exists t_time;"
+songplay_table_drop = "DROP TABLE IF EXISTS songplay;"
+user_table_drop = "DROP TABLE IF EXISTS users;"
+song_table_drop = "DROP TABLE IF EXISTS songs;"
+artist_table_drop = "DROP TABLE IF EXISTS artists;"
+time_table_drop = "DROP TABLE IF EXISTS time;"
 
-songplay_table_drop_sa = "drop table if exists sa_t_songplay;"
-user_table_drop_sa = "drop table if exists sa_t_user;"
-song_table_drop_sa = "drop table if exists sa_t_song;"
-artist_table_drop_sa = "drop table if exists sa_t_artist;"
-time_table_drop_sa = "drop table if exists sa_t_time;"
+songplay_table_drop_sa = "DROP TABLE IF EXISTS sa_songplay;"
+user_table_drop_sa = "DROP TABLE IF EXISTS sa_users;"
+# song_table_drop_sa = "DROP TABLE IF EXISTS sa_songs;"
+# artist_table_drop_sa = "DROP TABLE IF EXISTS sa_artists;"
+time_table_drop_sa = "DROP TABLE IF EXISTS sa_time;"
 
 # CREATE TABLES
 songplay_table_create = ("""
-create table if not exists t_songplay
+CREATE TABLE IF NOT EXISTS songplay
 (
-    "timestamp" timestamp,
-    user_id varchar,
-    song_id varchar,
-    artist_id varchar,
-    session_id integer,
-    level varchar,
-    location varchar,
-    user_agent varchar,
-    UNIQUE ("timestamp", song_id, artist_id, user_id)
+    "timestamp" TIMESTAMP NOT NULL,
+    user_id VARCHAR NOT NULL,
+    song_id VARCHAR,
+    artist_id VARCHAR,
+    session_id INTEGER,
+    level VARCHAR ,
+    location VARCHAR,
+    user_agent VARCHAR,
+    UNIQUE ("timestamp", song_id, artist_id, user_id),
+    FOREIGN KEY (user_id, level) REFERENCES users (user_id, level),
+    FOREIGN KEY (song_id) REFERENCES songs (song_id),
+    FOREIGN KEY (artist_id) REFERENCES artists (artist_id),
+    FOREIGN KEY ("timestamp") REFERENCES time ("timestamp")
 );
 """)
 
 user_table_create = ("""
-create table if not exists t_user
+CREATE TABLE IF NOT EXISTS users
 (
-    user_id varchar unique,
-    first_name varchar,
-    last_name varchar,
-    gender char,
-    level varchar,
-    primary key (user_id)
+    user_id VARCHAR NOT NULL,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    gender CHAR,
+    level VARCHAR,
+    UNIQUE (user_id, level),
+    PRIMARY KEY (user_id, level)
 );
 """)
 
 song_table_create = ("""
-CREATE TABLE IF NOT EXISTS t_song
+CREATE TABLE IF NOT EXISTS songs
 (
-    song_id varchar unique,
-    title varchar,
+    song_id VARCHAR UNIQUE NOT NULL,
+    title VARCHAR,
     artist_id VARCHAR,
     YEAR int,
-    duration float
+    duration FLOAT,
+    PRIMARY KEY(song_id)
 );
 """)
 
 artist_table_create = ("""
-CREATE TABLE IF NOT EXISTS t_artist
+CREATE TABLE IF NOT EXISTS artists
 (
-    artist_id varchar unique,
+    artist_id VARCHAR UNIQUE NOT NULL,
     name VARCHAR,
-    location varchar,
-    latitude float,
-    longitude float
+    location VARCHAR,
+    latitude FLOAT,
+    longitude FLOAT,
+    PRIMARY KEY(artist_id)
 );
 """)
 
 time_table_create = ("""
-create table if not exists t_time
+CREATE TABLE IF NOT EXISTS time
 (
-    "timestamp" timestamp unique,
-    hour integer,
-    day integer,
-    weekofyear integer,
-    month integer,
-    year integer,
-    weekday integer
+    "timestamp" timestamp UNIQUE,
+    hour INTEGER,
+    day INTEGER,
+    weekofyear INTEGER,
+    month INTEGER,
+    year INTEGER,
+    weekday INTEGER,
+    PRIMARY KEY ("timestamp")
 );
 """)
 
@@ -83,69 +91,69 @@ create table if not exists t_time
 
 # sa tables
 songplay_table_create_sa = ("""
-create table if not exists sa_t_songplay
+CREATE TABLE IF NOT EXISTS sa_songplay
 (
     "timestamp" timestamp,
-    user_id varchar,
-    song_id varchar,
-    artist_id varchar,
-    session_id integer,
-    level varchar,
-    location varchar,
-    user_agent varchar
+    user_id VARCHAR,
+    song_id VARCHAR,
+    artist_id VARCHAR,
+    session_id INTEGER,
+    level VARCHAR,
+    location VARCHAR,
+    user_agent VARCHAR
 );
 """)
 
 user_table_create_sa = ("""
-create table if not exists sa_t_user
+CREATE TABLE IF NOT EXISTS sa_users
 (
-    user_id varchar,
-    first_name varchar,
-    last_name varchar,
-    gender char,
-    level varchar
+    user_id VARCHAR,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    gender CHAR,
+    level VARCHAR
 );
 """)
 
 song_table_create_sa = ("""
-CREATE TABLE IF NOT EXISTS sa_t_song
+CREATE TABLE IF NOT EXISTS sa_songs
 (
-    song_id varchar,
-    title varchar,
+    song_id VARCHAR,
+    title VARCHAR,
     artist_id VARCHAR,
-    YEAR int,
-    duration float
+    YEAR INTEGER,
+    duration FLOAT
 );
 """)
 
 artist_table_create_sa = ("""
-CREATE TABLE IF NOT EXISTS sa_t_artist
+CREATE TABLE IF NOT EXISTS sa_artists
 (
-    artist_id varchar,
+    artist_id VARCHAR,
     name VARCHAR,
-    location varchar,
-    latitude float,
-    longitude float
+    location VARCHAR,
+    latitude FLOAT,
+    longitude FLOAT
 );
 """)
 
 time_table_create_sa = ("""
-create table if not exists sa_t_time
+CREATE TABLE IF NOT EXISTS sa_time
 (
-    "timestamp" timestamp,
-    hour integer,
-    day integer,
-    weekofyear integer,
-    month integer,
-    year integer,
-    weekday integer
+    "timestamp" TIMESTAMP,
+    hour INTEGER,
+    day INTEGER,
+    weekofyear INTEGER,
+    month INTEGER,
+    year INTEGER,
+    weekday INTEGER
 );
 """)
 
 # INSERT RECORDS
 
 songplay_table_insert = ("""
-insert into t_songplay
+insert into songplay
 (
     "timestamp",
     user_id ,
@@ -165,13 +173,13 @@ select
     level,
     location ,
     user_agent
-from sa_t_songplay
+from sa_songplay
 on conflict ("timestamp", song_id, artist_id, user_id)
 do nothing;
 """)
 
 user_table_insert = ("""
-insert into t_user
+insert into users
 (
     user_id,
     first_name,
@@ -185,13 +193,13 @@ select
     last_name,
     gender,
     level
-from sa_t_user
-on conflict (user_id)
+from sa_users
+on conflict (user_id, level)
 do nothing;
 """)
 
 song_table_insert = ("""
-insert into t_song
+insert into songs
 (
     song_id,
     artist_id,
@@ -205,7 +213,7 @@ do nothing;
 """)
 
 artist_table_insert = ("""
-insert into t_artist (
+insert into artists (
     artist_id,
     name,
     location,
@@ -217,10 +225,10 @@ do nothing;
 """)
 
 time_table_insert = ("""
-INSERT INTO t_time
+INSERT INTO time
       ("timestamp", hour, day, weekofyear, month, year, weekday)
 SELECT "timestamp", hour, day, weekofyear, month, year, weekday
-FROM sa_t_time
+FROM sa_time
 WHERE 1=1
 ON CONFLICT ("timestamp")
 DO NOTHING;
@@ -229,32 +237,32 @@ DO NOTHING;
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 time_table_copy = (f"""
-COPY sa_t_time
+COPY sa_time
 FROM '{current_path}/data/time_df.csv'
 DELIMITER '|' CSV;
 """)
 
 
 user_table_copy = (f"""
-COPY sa_t_user
+COPY sa_users
 FROM '{current_path}/data/user_df.csv'
 DELIMITER '|' CSV;
 """)
 
 songplay_table_copy = (f"""
-COPY sa_t_songplay
+COPY sa_songplay
 FROM '{current_path}/data/songplay_df.csv'
 DELIMITER '|' CSV;
 """)
 
 
-# FIND SONGS
+# FIND song
 song_select = ("""
 select
     s.song_id,
     a.artist_id
-from t_artist a,
-    t_song s
+from artists a,
+    songs s
 where 1=1
     and a.artist_id = s.artist_id
     and s.title ilike %s
@@ -264,15 +272,14 @@ where 1=1
 
 # QUERY LISTS
 
-create_table_queries = [songplay_table_create, user_table_create,
-                        song_table_create, artist_table_create,
-                        time_table_create]
+create_table_queries = [user_table_create, song_table_create,
+                        artist_table_create, time_table_create,
+                        songplay_table_create]
 drop_table_queries = [songplay_table_drop, user_table_drop,
                       song_table_drop, artist_table_drop, time_table_drop]
 
 create_sa_table_queries = [songplay_table_create_sa, user_table_create_sa,
-                           song_table_create_sa, artist_table_create_sa,
                            time_table_create_sa]
+
 drop_sa_table_queries = [songplay_table_drop_sa, user_table_drop_sa,
-                         song_table_drop_sa, artist_table_drop_sa,
                          time_table_drop_sa]
